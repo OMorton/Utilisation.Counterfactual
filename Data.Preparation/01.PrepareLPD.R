@@ -7,13 +7,17 @@ library(tidyverse)
 
 # Load the living planet data
 lpd_raw <- data.table::fread("Data/LPD - use and trade/LPD_20260424.csv")
-
+length(unique(lpd_raw$ID))
+length(unique(lpd_raw$Binomial))
+min()
 # Not all time series have been checked for threats - remove unknowns
 lpd_raw %>% group_by(Threat_status) %>% tally()
 lpd_raw <- lpd_raw %>% filter(!grepl("Unknown", Threat_status), Threat_status != "Not yet coded")
+length(unique(lpd_raw$ID))
 # Not all the time series have infomation on use
 lpd_raw %>% group_by(Utilised) %>%tally()
 lpd_raw <- lpd_raw %>% filter(!grepl("Unknown", Utilised), Utilised != "Not yet coded")
+length(unique(lpd_raw$ID))
 ## This leaves 6307 populations series.
 
 # Make long format (479,332 obs)
