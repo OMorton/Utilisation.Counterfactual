@@ -1,6 +1,6 @@
 library(tidyverse)
 library(mgcv)
-library(MASS)
+#library(MASS)
 library(gratia)
 
 load(file = "Data/data_models.RData")
@@ -54,10 +54,10 @@ rm(dist_mat)
 ## Fit AR Naive model ----------------------------------------------------------
 glob.mod.gam.rhonaive <- bam(
   popchange ~ 
-    # Focal Use baseline offset and main trajectory
+    ## Focal Use baseline offset and main trajectory
     used_f + 
     s(year.z, by = used_f, k = 15, bs = "cr") + 
-    # Threat main effects (parametric offsets + difference smooths)
+    ## Threat main effects (parametric offsets + difference smooths)
     threat_habitat_loss_change_ord + threat_pollution_ord + 
     threat_disease_ord + threat_climate_change_ord + threat_invasive_spp_genes_ord +
     s(year.z, by = threat_habitat_loss_change_ord, k = 15, bs = "cr") +
@@ -65,18 +65,20 @@ glob.mod.gam.rhonaive <- bam(
     s(year.z, by = threat_disease_ord, k = 15, bs = "cr") +
     s(year.z, by = threat_climate_change_ord, k = 15, bs = "cr") +
     s(year.z, by = threat_invasive_spp_genes_ord, k = 15, bs = "cr") +
-    # Synergistic Use x Threat interaction smooths
+    ## Synergistic Use x Threat interaction smooths
     s(year.z, by = inter_luc_num, k = 10, bs = "cr") +
     s(year.z, by = inter_pol_num, k = 10, bs = "cr") +
     s(year.z, by = inter_dis_num, k = 10, bs = "cr") +
     s(year.z, by = inter_cli_num, k = 10, bs = "cr") +
     s(year.z, by = inter_inv_num, k = 10, bs = "cr") +
-    # Spatial field & Spatiotemporal dynamics
+    ## Spatial field & Spatiotemporal dynamics
     s(Latitude, Longitude, bs = "tp", k = 20) +
     ti(Latitude, Longitude, year.z, d = c(2, 1), bs = c("tp", "cr")) +
-    # Random slopes, intercepts for series & annual macro shocks
-    s(series, bs = "re") +
-    s(series, time_scaled, bs = "re") + 
+    ## Random slopes, intercepts for series & annual macro shocks
+    # s(series, bs = "re") +
+    # s(series, time_scaled, bs = "re") + 
+    ## switched to fs smooth to allow non-linear individual series trends
+    s(scaled_series_year, series, k = 3, bs = "fs") + 
     s(fyear, used_f, bs = "re"),
   #rho = 0.2462075, AR.start = mod_dat_full$AR_start,
   data = mod_dat_full, discrete = TRUE, nthreads = 4)
@@ -86,10 +88,10 @@ rho_est <- acf(residuals(glob.mod.gam.rhonaive), plot = FALSE)$acf[2] # 0.242229
 ## Fit AR Model ----------------------------------------------------------------
 glob.mod.gam.rhotuned <- bam(
   popchange ~ 
-    # Focal Use baseline offset and main trajectory
+    ## Focal Use baseline offset and main trajectory
     used_f + 
     s(year.z, by = used_f, k = 15, bs = "cr") + 
-    # Threat main effects (parametric offsets + difference smooths)
+    ## Threat main effects (parametric offsets + difference smooths)
     threat_habitat_loss_change_ord + threat_pollution_ord + 
     threat_disease_ord + threat_climate_change_ord + threat_invasive_spp_genes_ord +
     s(year.z, by = threat_habitat_loss_change_ord, k = 15, bs = "cr") +
@@ -97,18 +99,20 @@ glob.mod.gam.rhotuned <- bam(
     s(year.z, by = threat_disease_ord, k = 15, bs = "cr") +
     s(year.z, by = threat_climate_change_ord, k = 15, bs = "cr") +
     s(year.z, by = threat_invasive_spp_genes_ord, k = 15, bs = "cr") +
-    # Synergistic Use x Threat interaction smooths
+    ## Synergistic Use x Threat interaction smooths
     s(year.z, by = inter_luc_num, k = 10, bs = "cr") +
     s(year.z, by = inter_pol_num, k = 10, bs = "cr") +
     s(year.z, by = inter_dis_num, k = 10, bs = "cr") +
     s(year.z, by = inter_cli_num, k = 10, bs = "cr") +
     s(year.z, by = inter_inv_num, k = 10, bs = "cr") +
-    # Spatial field & Spatiotemporal dynamics
+    ## Spatial field & Spatiotemporal dynamics
     s(Latitude, Longitude, bs = "tp", k = 20) +
     ti(Latitude, Longitude, year.z, d = c(2, 1), bs = c("tp", "cr")) +
-    # Random slopes, intercepts for series & annual macro shocks
-    s(series, bs = "re") +
-    s(series, time_scaled, bs = "re") + 
+    ## Random slopes, intercepts for series & annual macro shocks
+    # s(series, bs = "re") +
+    # s(series, time_scaled, bs = "re") + 
+    ## switched to fs smooth to allow non-linear individual series trends
+    s(scaled_series_year, series, k = 3, bs = "fs") + 
     s(fyear, used_f, bs = "re"),
   rho = 0.2422293, AR.start = mod_dat_full$AR_start,
   data = mod_dat_full, discrete = TRUE, nthreads = 4)
@@ -116,4 +120,4 @@ glob.mod.gam.rhotuned <- bam(
 # Check residual autocorr (~0.00)
 itsadug::acf_resid(glob.mod.gam.rhotuned, plot = FALSE)[2]
 
-saveRDS(glob.mod.gam.rhotuned, "GLOB.use.threat.syn.full.v1.rds", compress = "xz")
+saveRDS(glob.mod.gam.rhotuned, "GLOB.use.threat.syn.full.v2.rds", compress = "xz")
