@@ -50,7 +50,7 @@ make_scenario_grid <- function(scenario_name, luc = 0, pol = 0, dis = 0, cli = 0
               threat_invasive_spp_genes_ord  = ordered(inv, levels = c("0", "1")),
     # Baseline dummy series and median coordinates excluded from prediction
     series   = mod_dat_full$series[500], 
-    time_dec = 0, time_scaled = 0,
+    time_dec = 0, time_scaled = 0, scaled_series_year = 0,
     Latitude = median(mod_dat_full$Latitude, na.rm = TRUE),
     Longitude = median(mod_dat_full$Longitude, na.rm = TRUE)) %>%
     # Join the exact numeric year.z corresponding to each fyear level
@@ -77,7 +77,7 @@ pred_grid_inter <- bind_rows(
 all_smooth_labels <- sapply(glob.mod.gam.rhotuned$smooth, function(x) x$label)
 rand_effects <- all_smooth_labels[grep("series|Latitude|Longitude", all_smooth_labels)]
 rand_effects_to_exclude <- c(
-  "s(time_dec,series)", "s(time_scaled,series)" ,"s(series)",
+  "s(time_dec,series)", "s(time_scaled,series)" ,"s(series)","s(scaled_series_year,series)",
   "s(Latitude,Longitude)", "ti(year.z,Latitude,Longitude)")
 
 draws_inter <- fitted_samples(glob.mod.gam.rhotuned,  n = 100, 
@@ -100,7 +100,7 @@ draws_inter <- fitted_samples(glob.mod.gam.rhotuned,  n = 100,
     year = as.numeric(as.character(fyear))) %>%
   ungroup() %>% filter(year >= 1970)
 
-saveRDS(draws_inter, "ave.draws.inter.rds", compress = "xz")
+saveRDS(draws_inter, "Outputs/Draws/ave.draws.inter.rds", compress = "xz")
 
 ave_pred_plt <- ggplot(draws_inter, aes(x = year, y = rate_rel_index, group = interaction(.draw, used_f), color = used_f)) +
   geom_line(alpha = 0.12, linewidth = .3) +
@@ -189,7 +189,7 @@ draws_att <- fitted_samples(glob.mod.gam.rhotuned,  n = 100,
   data = pred_grid_att, exclude = NULL) %>%
   left_join(pred_grid_att, by = ".row")
 
-saveRDS(draws_att, "counterfac.draws.inter.rds", compress = "xz")
+saveRDS(draws_att, "Outputs/Draws/counterfac.draws.inter.rds", compress = "xz")
 
 
 # Aggregate across treated series, anchor to 1970, and compute ATT
