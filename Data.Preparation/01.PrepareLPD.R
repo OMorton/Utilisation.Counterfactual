@@ -66,7 +66,7 @@ mod_dat_full <- lpd_final %>% ungroup() %>%
   mutate(Year = as.numeric(Year),
          series = as.character(ID)) %>%
   group_by(ID) %>%
-  mutate(scaled_year = c(scale(Year,center = TRUE,scale = FALSE)), #center time to 0 for each timeseries
+  mutate(scaled_series_year = c(scale(Year,center = TRUE,scale = TRUE)), #center time to 0 for each timeseries
          time = seq_along(Year) - 1,
          time_dec = time/10,
          time_scaled = c(scale(time,center = TRUE,scale = TRUE)),

@@ -83,7 +83,7 @@ glob.mod.gam.rhonaive <- bam(
   #rho = 0.2462075, AR.start = mod_dat_full$AR_start,
   data = mod_dat_full, discrete = TRUE, nthreads = 4)
 
-rho_est <- acf(residuals(glob.mod.gam.rhonaive), plot = FALSE)$acf[2] # 0.2422293
+rho_est <- acf(residuals(glob.mod.gam.rhonaive), plot = FALSE)$acf[2] #  0.09904038
 
 ## Fit AR Model ----------------------------------------------------------------
 glob.mod.gam.rhotuned <- bam(
@@ -114,10 +114,10 @@ glob.mod.gam.rhotuned <- bam(
     ## switched to fs smooth to allow non-linear individual series trends
     s(scaled_series_year, series, k = 3, bs = "fs") + 
     s(fyear, used_f, bs = "re"),
-  rho = 0.2422293, AR.start = mod_dat_full$AR_start,
+  rho =  0.09904038, AR.start = mod_dat_full$AR_start,
   data = mod_dat_full, discrete = TRUE, nthreads = 4)
 
 # Check residual autocorr (~0.00)
 itsadug::acf_resid(glob.mod.gam.rhotuned, plot = FALSE)[2]
 
-saveRDS(glob.mod.gam.rhotuned, "GLOB.use.threat.syn.full.v2.rds", compress = "xz")
+saveRDS(glob.mod.gam.rhotuned, "Outputs/Models/GLOB.use.threat.syn.full.v2.rds", compress = "xz")
