@@ -18,7 +18,6 @@ mod_dat_full %>% group_by(threats) %>% summarise(length(unique(Binomial)))
 
 mod_dat_full %>% group_by(Utilised) %>% summarise(mean(threats))
 
-
 mod_dat_full <- mod_dat_full %>%
   mutate(
     Country_clean = iconv(Country, from = "latin1", to = "UTF-8", sub = "?"),
@@ -34,12 +33,9 @@ mod_dat_full$iso3c <- countrycode(
   mod_dat_full$Country_clean, 
   origin = "country.name", 
   destination = "iso3c",
-  custom_match = c(
-    "International Waters" = NA_character_,
-    "Reunion"              = "REU",
-    "R?Runion"             = "REU",
-    "Curacao"              = "CUW",
-    "Aland Islands"        = "ALA"))
+  custom_match = c("International Waters" = NA_character_,
+    "Reunion" = "REU", "R?Runion" = "REU", "Curacao" = "CUW",
+    "Aland Islands" = "ALA"))
 
 ## Mapping series coverage and use ---------------------------------------------
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -47,8 +43,7 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 # Summarize and create 4x4 classification
 national.sum <- mod_dat_full %>% 
   group_by(iso3c) %>%
-  summarise(
-    n.series = n_distinct(ID),
+  summarise(n.series = n_distinct(ID),
     n.used.series = n_distinct(ID[used == 1])) %>%
   mutate(perc.used = (n.used.series / n.series) * 100,
          series.cat = case_when(n.series < 6 ~ "up to 5",
@@ -77,11 +72,10 @@ create_2d_palette <- function(c11, c41, c14, c44, n = 4) {
 }
 
 # Define 4 corner colors: [Low/Low, High Var1/Low Var2, Low Var1/High Var2, High/High]
-pal_mat <- create_2d_palette(
-  c11 = "#f0e4d7", # Soft Cream/Tan  (Low Series, Low % - distinct from NA)
-  c41 = "#d95f02", # Orange          (High Series, Low %)
-  c14 = "#1b9e77", # Teal            (Low Series, High %)
-  c44 = "#3b0040", # Deep Purple     (High Series, High %)
+pal_mat <- create_2d_palette(c11 = "#f0e4d7", # (Low Series, Low % - distinct from NA)
+  c41 = "#d95f02", # (High Series, Low %)
+  c14 = "#1b9e77", # (Low Series, High %)
+  c44 = "#3b0040", # (High Series, High %)
   n = 4)
 
 # Convert 4x4 matrix to lookup dataframe
@@ -107,11 +101,8 @@ map_p <- ggplot(world_map) +
   scale_fill_manual(values = bi_pal, na.value = "grey90", na.translate = FALSE) +
   coord_sf(crs = "+proj=moll") +
   theme_minimal() +
-  theme(
-    legend.position = "none",
-    panel.grid = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank())
+  theme(legend.position = "none",  panel.grid = element_blank(),
+    axis.text = element_blank(),  axis.ticks = element_blank())
 
 # Create 4x4 Legend Plot
 legend_p <- ggplot(pal_df, aes(x = factor(var1_num), y = factor(var2_num), fill = fill_color)) +
@@ -121,14 +112,12 @@ legend_p <- ggplot(pal_df, aes(x = factor(var1_num), y = factor(var2_num), fill 
   scale_y_discrete(labels = c("0-25%", "26-50%", "51-75%", "76-100%")) +
   labs(x = "Total Series", y = "% Used") +
   theme_minimal() +
-  theme(
-    axis.title = element_text(size = 10, face = "plain"),
+  theme(axis.title = element_text(size = 10, face = "plain"),
     axis.text = element_text(size = 8),
     axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid = element_blank(),
-    aspect.ratio = 1)
+    panel.grid = element_blank(), aspect.ratio = 1)
 
-# 6. Combine Map + Legend Inset
+# Combine map + legend
 final_map <- map_p + inset_element(legend_p, left = 0.02, bottom = 0.05, right = 0.30, top = 0.40)
 final_map
 
@@ -163,7 +152,6 @@ taxa.plt <-  ggplot(taxa.summary, aes(x = Class, y = n.series, fill = Class, col
   scale_alpha_manual( values = c("Used" = 1, "Not used" = 0), 
                       name = "Status",guide = guide_legend(override.aes = list(fill = "grey40", color = "black"))) +
   scale_y_continuous(breaks = c(0, 250, 500, 750)) +
-  # Horizontal line at y = 850 between 2nd and 5th Class on X-axis
   annotate( "segment",  x = 2.5, xend = 7.5, y = 900, yend = 900, 
             color = "black",  linewidth = 0.6) +
   annotate( "segment",  x = 2.5, xend = 2.5, y = 900, yend = 850, 
@@ -189,9 +177,3 @@ ggsave(path = "Outputs/Figures", filename = "rawdata.summary.v1.png",
        plot = descr.arr, width = 8, height = 8, units = "in",bg = "white")
 
 
-
-year.sum <- mod_dat_full %>% group_by(Year) %>% summarise(n.series = length(unique(ID)))
-
-ggplot(year.sum, aes(Year, n.series)) +
-  geom_col() +
-  theme_minimal()

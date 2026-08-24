@@ -35,10 +35,9 @@ lpd_long <- lpd_long %>%
   mutate(popchange=log(Count+(max(Count, na.rm=T) /100))) %>%
          #Protected_status=gsub(" .*", "", Protected_status)) 
   ungroup()
-## Note: a few series have zero series so return -Inf. Will remove.
 
 # Filter for 7 or more years of data with at least 50% of the years with records
-##  Note: Sci Adv paper kept only 10 or more years we're trying with 6.
+##  Note: Sci Adv paper kept only 10 or more years we're trying with 7.
 lpd_final <- lpd_long %>%
   group_by(ID) %>%
   drop_na(popchange) %>%
@@ -70,7 +69,7 @@ mod_dat_full <- lpd_final %>% ungroup() %>%
   mutate(Year = as.numeric(Year),
          series = as.character(ID)) %>%
   group_by(ID) %>%
-  mutate(scaled_series_year = c(scale(Year,center = TRUE,scale = TRUE)), #center time to 0 for each timeseries
+  mutate(scaled_series_year = c(scale(Year,center = TRUE,scale = TRUE)), #z-score time to 0 for each timeseries
          time = seq_along(Year) - 1,
          time_dec = time/10,
          time_scaled = c(scale(time,center = TRUE,scale = TRUE)),
