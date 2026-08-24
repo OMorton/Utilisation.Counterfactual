@@ -157,7 +157,7 @@ ggsave(path = "Outputs/Figures", filename = "ave.contrast.v1.png",
        plot = ave_contrast_plt, width = 8, height = 6, units = "in",bg = "white")
 ## Annual average counterfactual -----------------------------------------------
 
-# This approach calculates global mean trajectories by averaging raw model predictions 
+# Calculates global mean trajectories by averaging model predictions 
 # across all treated populations for each year, under both factual (harvested) and 
 # counterfactual (unharvested) conditions. Each global trajectory is anchored to 
 # its 1970 value to produce relative growth indices, and the treatment effect is 
@@ -190,6 +190,7 @@ draws_att <- fitted_samples(glob.mod.gam.rhotuned,  n = 100,
   left_join(pred_grid_att, by = ".row")
 
 saveRDS(draws_att, "Outputs/Draws/counterfac.draws.inter.rds", compress = "xz")
+draws_att<-read_rds( "Outputs/Draws/counterfac.draws.inter.rds")
 
 
 # Aggregate across treated series, anchor to 1970, and compute ATT
@@ -231,7 +232,7 @@ ann_ave_plt <- ggplot(att_annual_average, aes(x = year, y = att_ratio)) +
 
 ## Series-level counterfactual -------------------------------------------------
 
-# This method computes the exact log-scale treatment effect for each population 
+# This method computes the log-scale treatment effect for each population 
 # series individually before aggregating. By subtracting the counterfactual prediction 
 # from the factual prediction within each series, all shared random effects (such 
 # as location, baseline density, and series-specific slopes) cancel out 
@@ -240,7 +241,7 @@ ann_ave_plt <- ggplot(att_annual_average, aes(x = year, y = att_ratio)) +
 # mean index ratio.
 
 # Clean causal isolation at the series level. Requires every included series 
-# to have an observation in 1970. Thus substantial data loss and potential 
+# to have an observation in 1970. Thus substantial data loss and  
 # survivor bias toward older monitoring programs.
 
 att_series_level <- draws_att %>%
