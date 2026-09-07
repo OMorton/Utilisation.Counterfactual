@@ -11,6 +11,7 @@ threat_cols <- c("used", "threat_habitat_loss_change", "threat_pollution",
 
 mod_dat_full <- mod_dat_full %>%
   mutate(series = factor(series), fyear = factor(fyear), Site = factor(Site),
+         Class_f = as.factor(Class),
          # ordered threat factors
          across(all_of(threat_cols), ~ factor(.x), .names = "{.col}_f"),
          across(all_of(threat_cols), ~ ordered(.x, levels = c("0", "1")), .names = "{.col}_ord"),
@@ -79,11 +80,12 @@ glob.mod.gam.rhonaive <- bam(
     # s(series, time_scaled, bs = "re") + 
     ## switched to fs smooth to allow non-linear individual series trends
     s(scaled_series_year, series, k = 3, bs = "fs") + 
-    s(fyear, used_f, bs = "re"),
+    s(fyear, used_f, bs = "re") +
+    s(year.z, Class_f, k = 5, bs = "fs"), # small Class only has obs in 7 years.
   #rho = 0.2462075, AR.start = mod_dat_full$AR_start,
   data = mod_dat_full, discrete = TRUE, nthreads = 4)
 
-rho_est <- acf(residuals(glob.mod.gam.rhonaive), plot = FALSE)$acf[2] #  0.09904038
+rho_est <- acf(residuals(glob.mod.gam.rhonaive), plot = FALSE)$acf[2] #  0.09894994
 
 ## Fit AR Model ----------------------------------------------------------------
 glob.mod.gam.rhotuned <- bam(
@@ -113,11 +115,16 @@ glob.mod.gam.rhotuned <- bam(
     # s(series, time_scaled, bs = "re") + 
     ## switched to fs smooth to allow non-linear individual series trends
     s(scaled_series_year, series, k = 3, bs = "fs") + 
-    s(fyear, used_f, bs = "re"),
-  rho =  0.09904038, AR.start = mod_dat_full$AR_start,
+    s(fyear, used_f, bs = "re") +
+  s(year.z, Class_f, k = 5, bs = "fs"), # small Class only has obs in 7 years.
+  rho =  0.09894994, AR.start = mod_dat_full$AR_start,
   data = mod_dat_full, discrete = TRUE, nthreads = 4)
 
 # Check residual autocorr (~0.00)
 itsadug::acf_resid(glob.mod.gam.rhotuned, plot = FALSE)[2]
 
-saveRDS(glob.mod.gam.rhotuned, "Outputs/Models/GLOB.use.threat.syn.full.v2.rds", compress = "xz")
+# Save
+saveRDS(glob.mod.gam.rhotuned, "Outputs/Models/GLOB.use.threat.syn.full.v3.rds", compress = "xz")
+
+mod_sum <- summary(glob.mod.gam.rhotuned)
+save(mod_sum, file = "Outputs/Models/GLOB.use.threat.syn.full.v3.SUMMARY.Rdata")

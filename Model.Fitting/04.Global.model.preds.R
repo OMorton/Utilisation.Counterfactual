@@ -6,7 +6,7 @@ library(ggpubr)
 detach("package:MASS", unload = TRUE)
 
 load(file = "Data/data_models.RData")
-glob.mod.gam.rhotuned <- readRDS("Outputs/Models/GLOB.use.threat.syn.full.v2.rds")
+glob.mod.gam.rhotuned <- readRDS("Outputs/Models/GLOB.use.threat.syn.full.v3.rds")
 
 ## Data Preparation -----------------------------------------------------------
 threat_cols <- c("used", "threat_habitat_loss_change", "threat_pollution", 
@@ -14,6 +14,7 @@ threat_cols <- c("used", "threat_habitat_loss_change", "threat_pollution",
 
 mod_dat_full <- mod_dat_full %>%
   mutate(series = factor(series), fyear = factor(fyear), Site = factor(Site),
+         Class_f = as.factor(Class),
          # ordered threat factors
          across(all_of(threat_cols), ~ factor(.x), .names = "{.col}_f"),
          across(all_of(threat_cols), ~ ordered(.x, levels = c("0", "1")), .names = "{.col}_ord"),
@@ -49,7 +50,7 @@ make_scenario_grid <- function(scenario_name, luc = 0, pol = 0, dis = 0, cli = 0
               threat_climate_change_ord     = ordered(cli, levels = c("0", "1")),
               threat_invasive_spp_genes_ord  = ordered(inv, levels = c("0", "1")),
     # Baseline dummy series and median coordinates excluded from prediction
-    series   = mod_dat_full$series[500], 
+    series   = mod_dat_full$series[500], Class_f = as.factor("Aves"),
     time_dec = 0, time_scaled = 0, scaled_series_year = 0,
     Latitude = median(mod_dat_full$Latitude, na.rm = TRUE),
     Longitude = median(mod_dat_full$Longitude, na.rm = TRUE)) %>%
@@ -70,15 +71,15 @@ pred_grid_inter <- bind_rows(
   make_scenario_grid("LUC", luc = 1),
   make_scenario_grid("CC", cli = 1),
   make_scenario_grid("Pol", pol = 1),
-  make_scenario_grid("LUC + Pol", luc = 1, pol = 1),
-  make_scenario_grid("LUC + CC", luc = 1, cli = 1)) %>% 
+  make_scenario_grid("Inv", inv = 1),
+  make_scenario_grid("Dis", dis = 1)) %>% 
   mutate(.row = row_number())
 
 all_smooth_labels <- sapply(glob.mod.gam.rhotuned$smooth, function(x) x$label)
-rand_effects <- all_smooth_labels[grep("series|Latitude|Longitude", all_smooth_labels)]
+rand_effects <- all_smooth_labels[grep("series|Latitude|Longitude|Class", all_smooth_labels)]
 rand_effects_to_exclude <- c(
   "s(time_dec,series)", "s(time_scaled,series)" ,"s(series)","s(scaled_series_year,series)",
-  "s(Latitude,Longitude)", "ti(year.z,Latitude,Longitude)")
+  "s(Latitude,Longitude)", "ti(year.z,Latitude,Longitude)", "s(year.z,Class_f)")
 
 draws_inter <- fitted_samples(glob.mod.gam.rhotuned,  n = 100, 
                               data = pred_grid_inter, exclude = rand_effects_to_exclude) %>% 
@@ -146,8 +147,7 @@ ave_contrast_plt <- ggplot(contrast_draws, aes(x = year, y = ratio_rel_index)) +
               fill = NA, colour = "black", linetype = "dashed", linewidth = .5) +
   geom_line(data = contrast_sum, aes(year, rel_ratio_mn), colour = "black", linewidth = .5) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "black", linewidth = 0.5) +
-  facet_wrap(~factor(scenario, levels=c("No Threats","CC","LUC","Pol", 
-                                        "LUC + CC", "LUC + Pol"))) +
+  facet_wrap(~factor(scenario), scale = "free_y") +
   labs(x = "Year", y = "Use impact index\n(1.0 = no net effect)") +
   theme_bw() +
   theme(strip.background =  element_blank(), legend.title = element_blank(),
@@ -226,7 +226,7 @@ ann_ave_plt <- ggplot(att_annual_average, aes(x = year, y = att_ratio)) +
               fill = NA, colour = "black", linetype = "dashed", linewidth = .5) +
   geom_line(data = att_annual_ave_sum, aes(year, att_ratio_mn), colour = "black", linewidth = .5) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "black", linewidth = 0.5) +
-  coord_cartesian(ylim = c(0, 1.1), expand = F) +
+  coord_cartesian(ylim = c(0, 1.3), expand = F) +
   labs(x = "Year", y = "Use impact index\n(1.0 = no net effect)") +
   theme_bw()
 
@@ -274,7 +274,7 @@ series_plt <- ggplot(att_series_level, aes(x = year, y = att_ratio)) +
               fill = NA, colour = "black", linetype = "dashed", linewidth = .5) +
   geom_line(data = att_series_sum, aes(year, att_ratio_mn), colour = "black", linewidth = .5) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "black", linewidth = 0.5) +
-  coord_cartesian(ylim = c(0, 1.1), expand = F) +
+  coord_cartesian(ylim = c(0, 1.3), expand = F) +
   labs(x = "Year", y = "Use impact index\n(1.0 = no net effect)") +
   theme_bw()
 
@@ -329,7 +329,7 @@ chained_plt<- ggplot(att_chained, aes(x = year, y = att_ratio)) +
               fill = NA, colour = "black", linetype = "dashed", linewidth = .5) +
   geom_line(data = att_chained_sum, aes(year, att_ratio_mn), colour = "black", linewidth = .5) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "black", linewidth = 0.5) +
-  coord_cartesian(ylim = c(0, 1.1), expand = F) +
+  coord_cartesian(ylim = c(0, 1.3), expand = F) +
   labs(x = "Year", y = "Use impact index\n(1.0 = no net effect)") +
   theme_bw()
 
@@ -340,4 +340,70 @@ counter_arr <- ggarrange(ann_ave_plt, series_plt, chained_plt,
 
 ggsave(path = "Outputs/Figures", filename = "counterfac.est.v1.png",
        plot = counter_arr, width = 8, height = 3, units = "in",bg = "white")
+
+
+## Counterfactual threats -----------------------------------------------------
+
+
+
+att_chained_threats <- draws_att %>%
+  mutate(year = as.numeric(as.character(fyear))) %>%
+  mutate(threat_profile = case_when(
+      threat_habitat_loss_change_ord == "0" & threat_pollution_ord == "0" & 
+        threat_disease_ord == "0" & threat_climate_change_ord == "0" & 
+        threat_invasive_spp_genes_ord == "0" ~ "No Threats",
+      threat_habitat_loss_change_ord == "1" & threat_pollution_ord == "0" & 
+        threat_climate_change_ord == "0" ~ "LUC",
+      threat_climate_change_ord == "1" & threat_habitat_loss_change_ord == "0" & 
+        threat_pollution_ord == "0" ~ "CC",
+      threat_pollution_ord == "1" & threat_habitat_loss_change_ord == "0" & 
+        threat_climate_change_ord == "0" ~ "Pol",
+      threat_habitat_loss_change_ord == "1" & threat_pollution_ord == "1" ~ "LUC + Pol",
+      threat_habitat_loss_change_ord == "1" & threat_climate_change_ord == "1" ~ "LUC + CC",
+      TRUE ~ "Other Threats")) %>%
+  select(series, year, threat_profile, .draw, arm, .fitted) %>%
+  pivot_wider(names_from = arm, values_from = .fitted) %>%
+    mutate(log_effect = factual - counterfactual) %>%
+    group_by(series, .draw) %>%
+  arrange(year) %>%
+  mutate(inc_log_effect = log_effect - lag(log_effect)) %>%
+  ungroup() %>%
+  filter(!is.na(inc_log_effect)) %>%
+  filter(threat_profile %in% c("No Threats", "CC", "LUC", "Pol", "LUC + CC", "LUC + Pol")) %>%
+  group_by(threat_profile, year, .draw) %>%
+  summarise(mean_inc_att = mean(inc_log_effect, na.rm = TRUE), .groups = "drop") %>%
+  group_by(threat_profile, .draw) %>%
+  arrange(year) %>%
+  mutate(cum_log_att = cumsum(ifelse(year == 1970, 0, mean_inc_att)),
+    att_ratio   = exp(cum_log_att) ) %>%
+  ungroup() %>%
+  filter(year >= 1970)
+
+# Summary statistics across posterior draws
+att_threats_sum <- att_chained_threats %>% 
+  group_by(threat_profile, year) %>%
+  summarise(
+    att_ratio_mn = mean(att_ratio),
+    att_ratio_lo = quantile(att_ratio, probs = 0.025, na.rm = TRUE),
+    att_ratio_hi = quantile(att_ratio, probs = 0.975, na.rm = TRUE),
+    .groups = "drop" )
+
+threat_scenarios <- c("No Threats", "CC", "LUC", "Pol", "LUC + CC", "LUC + Pol")
+
+att_threat_plt <- ggplot(att_chained_threats, aes(x = year, y = att_ratio)) +
+  geom_line(aes(group = .draw), alpha = 0.08, color = "darkred", linewidth = 0.3) +
+  geom_ribbon(
+    data = att_threats_sum, 
+    aes(y = att_ratio_mn, ymin = att_ratio_lo, ymax = att_ratio_hi),
+    fill = NA, colour = "black", linetype = "dashed", linewidth = 0.5) +
+  geom_line(data = att_threats_sum, aes(year, att_ratio_mn), colour = "black", linewidth = 0.5) +
+  geom_hline(yintercept = 1.0, linetype = "dashed", color = "black", linewidth = 0.5) +
+  facet_wrap(~factor(threat_profile, levels = threat_scenarios)) +
+  coord_cartesian(ylim = c(0, 1.3), xlim = c(1970, 2020), expand = FALSE) +
+  labs(x = "Year", y = "Chained use impact index\n(1.0 = no net effect)") +
+  theme_bw() +
+  theme(strip.background = element_blank(), 
+    legend.position = "none", 
+    strip.text = element_text(face = "bold"))
+
 

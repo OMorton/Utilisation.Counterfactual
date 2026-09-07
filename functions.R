@@ -142,22 +142,37 @@ get_clean_formula_terms <- function(candidate_terms, data) {
 
 # class_att_plt()---------------------------------------------------------------
 
-class_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE) {
+class_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE, taxa.cols = FALSE) {
   
+  taxa <- unique(summary$taxa)
+  
+  taxa.col <- "darkred"
+  blank.col <- "grey60"
+  
+  if (taxa.cols == T) {
+    blank.col <- "grey95"
+    if (taxa == "Actinopteri") {taxa.col <- "#2B5C70"}
+    if (taxa == "Aves") {taxa.col <- "#D4A373"}
+    if (taxa == "Elasmobranchii") {taxa.col <- "#4A8B99"}
+    if (taxa == "Mammalia") {taxa.col <- "#7570B3"}
+    if (taxa == "Reptilia") {taxa.col <- "#A08B76"}
+  }
+    
   p_att <- ggplot(draws, aes(x = year, y = att_ratio)) +
-     geom_line(aes(group = .draw), alpha = 0.12, color = "darkred", linewidth = 0.3) +
+     geom_line(aes(group = .draw), alpha = 0.12, color = taxa.col, linewidth = 0.3) +
      geom_ribbon(data = summary, 
                  aes(y = att_ratio_mn, ymin = att_ratio_lo, ymax = att_ratio_hi),
                  fill = NA, colour = "black", linetype = "dashed", linewidth = 0.5) +
      geom_line(data = summary, aes(year, att_ratio_mn), colour = "black", linewidth = 0.7) +
      geom_hline(yintercept = 1.0, linetype = "solid", color = "black", linewidth = 0.5) +
-     coord_cartesian(ylim = c(0, max(draws$att_ratio)), expand = FALSE) +
+     coord_cartesian(ylim = c(0, max(draws$att_ratio)),
+                     xlim = c(1970, 2024), expand = FALSE) +
      labs(x = "Year", y = "Index") +
      theme_bw() +
     theme(plot.margin = margin(t = 0, unit = "pt"))
   
   if (common.y == TRUE) {
-    p_att <- p_att + coord_cartesian(ylim = c(0, 6), expand = F)
+    p_att <- p_att + coord_cartesian(ylim = c(0, 4),xlim = c(1970, 2024), expand = F)
   }
   
   dat_counts <- mod_dat_full %>%
@@ -178,14 +193,151 @@ class_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE) {
   
   p_bar <- ggplot(dat_counts, aes(x = year, y = n_series, fill = used_label)) +
     geom_col(width = 0.8) +
-    scale_fill_manual(values = c("Used" = "darkred", "Not used" = "grey60")) +
-    coord_cartesian(xlim = c(1970, max(aves_att_chained$year)), expand = FALSE) +
+    scale_fill_manual(values = c("Used" = taxa.col, "Not used" = blank.col)) +
+    coord_cartesian(xlim = c(1970, 2024), expand = FALSE) +
     scale_y_continuous(breaks = c(max_series_count), limits = c(0, max_series_count)) +
     theme_minimal() +
     theme(axis.title = element_blank(), axis.text.x = element_blank(),
           axis.ticks.x = element_blank(), axis.line.y = element_line(),
           legend.position = "none",panel.grid = element_blank(),
           plot.margin = margin(b = 0, t = 5, unit = "pt"))
+  
+  return(list(bar = p_bar, att = p_att))
+}
+
+# region_att_plt()---------------------------------------------------------------
+
+region_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE, reg.cols = T) {
+  
+  reg <- unique(summary$country)
+  
+  reg.col <- "darkred"
+  blank.col <- "grey60"
+  
+  if (reg.cols == T) {
+    blank.col <- "grey95"
+    if (reg == "Africa") {reg.col <- "#C0392B"}
+    if (reg == "Antarctic") {reg.col <- "#F39C12"}
+    if (reg == "Asia") {reg.col <- "#00B4D8"}
+    if (reg == "Europe") {reg.col <- "#388E3C"}
+    if (reg == "North America") {reg.col <- "#8E44AD"}
+    if (reg == "Oceania") {reg.col <- "#D81B60"}
+    if (reg == "Latin America and Caribbean") {reg.col <- "#4E6E58"}
+  }
+  
+  p_att <- ggplot(draws, aes(x = year, y = att_ratio)) +
+    geom_line(aes(group = .draw), alpha = 0.12, color = reg.col, linewidth = 0.3) +
+    geom_ribbon(data = summary, 
+                aes(y = att_ratio_mn, ymin = att_ratio_lo, ymax = att_ratio_hi),
+                fill = NA, colour = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_line(data = summary, aes(year, att_ratio_mn), colour = "black", linewidth = 0.7) +
+    geom_hline(yintercept = 1.0, linetype = "solid", color = "black", linewidth = 0.5) +
+    coord_cartesian(ylim = c(0, max(draws$att_ratio)),xlim = c(1970, 2024),
+                    expand = FALSE) +
+    scale_x_continuous(breaks = c(1980, 2000, 2020)) +
+    labs(x = "Year", y = "Index") +
+    theme_bw() +
+    theme(plot.margin = margin(t = 0, r = 2, unit = "pt"))
+  
+  if (common.y == TRUE) {
+    p_att <- p_att + coord_cartesian(ylim = c(0, 3.5),xlim = c(1970, 2024),  expand = F)
+  }
+  
+  dat_counts <- mod_dat_full %>%
+    filter(as.numeric(as.character(fyear)) >= 1969,
+           Region == reg) %>%
+    mutate(year = as.numeric(as.character(fyear))) %>%
+    filter(year >= 1970) %>%
+    group_by(year, used_f) %>%
+    summarise(n_series = n_distinct(series), .groups = "drop") %>%
+    mutate(used_label = factor(ifelse(used_f == "1", "Used", "Not used"), 
+                               levels = c("Used", "Not used")))
+  
+  max_series_count <- dat_counts %>%
+    group_by(year) %>%
+    summarise(total_n = sum(n_series), .groups = "drop") %>%
+    pull(total_n) %>%
+    max()
+  
+  p_bar <- ggplot(dat_counts, aes(x = year, y = n_series, fill = used_label)) +
+    geom_col(width = 0.8) +
+    scale_fill_manual(values = c("Used" = reg.col, "Not used" = blank.col)) +
+    coord_cartesian(xlim = c(1970, 2024), expand = FALSE) +
+    scale_y_continuous(breaks = c(max_series_count), limits = c(0, max_series_count)) +
+    theme_minimal() +
+    theme(axis.title = element_blank(), axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(), axis.line.y = element_line(),
+          legend.position = "none",panel.grid = element_blank(),
+          plot.margin = margin(b = 0, t = 5, r = 2, unit = "pt"))
+  
+  return(list(bar = p_bar, att = p_att))
+}
+
+# country_att_plt()---------------------------------------------------------------
+
+country_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE, reg.cols = T) {
+  
+  reg <- unique(summary$region)
+  country <- unique(summary$country)
+  target_iso <- unique(summary$iso)
+  reg.col <- "darkred"
+  blank.col <- "grey60"
+  
+  if (reg.cols == T) {
+    blank.col <- "grey95"
+    if (reg == "Africa") {reg.col <- "#C0392B"}
+    if (reg == "Antarctic") {reg.col <- "#F39C12"}
+    if (reg == "Asia") {reg.col <- "#00B4D8"}
+    if (reg == "Europe") {reg.col <- "#388E3C"}
+    if (reg == "North America") {reg.col <- "#8E44AD"}
+    if (reg == "Oceania") {reg.col <- "#D81B60"}
+    if (reg == "Latin America and Caribbean") {reg.col <- "#4E6E58"}
+  }
+  
+  p_att <- ggplot(draws, aes(x = year, y = att_ratio)) +
+    geom_line(aes(group = .draw), alpha = 0.12, color = reg.col, linewidth = 0.3) +
+    geom_ribbon(data = summary, 
+                aes(y = att_ratio_mn, ymin = att_ratio_lo, ymax = att_ratio_hi),
+                fill = NA, colour = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_line(data = summary, aes(year, att_ratio_mn), colour = "black", linewidth = 0.7) +
+    geom_hline(yintercept = 1.0, linetype = "solid", color = "black", linewidth = 0.5) +
+    coord_cartesian(ylim = c(0, max(draws$att_ratio)),xlim = c(1970, 2024),
+                    expand = FALSE) +
+    scale_x_continuous(breaks = c(1980, 2000, 2020)) +
+    labs(x = "Year", y = "Index") +
+    theme_bw() +
+    theme(plot.margin = margin(t = 0, r = 2, unit = "pt"))
+  
+  if (common.y == TRUE) {
+    p_att <- p_att + coord_cartesian(ylim = c(0, 3.5),xlim = c(1970, 2024),  expand = F)
+  }
+  
+  dat_counts <- mod_dat_full %>%
+    filter(as.numeric(as.character(fyear)) >= 1969,
+           Country == country) %>%
+    mutate(year = as.numeric(as.character(fyear))) %>%
+    filter(year >= 1970) %>%
+    group_by(year, used_f) %>%
+    summarise(n_series = n_distinct(series), .groups = "drop") %>%
+    mutate(used_label = factor(ifelse(used_f == "1", "Used", "Not used"), 
+                               levels = c("Used", "Not used")))
+  
+  max_series_count <- dat_counts %>%
+    group_by(year) %>%
+    summarise(total_n = sum(n_series), .groups = "drop") %>%
+    pull(total_n) %>%
+    max()
+  
+  p_bar <- ggplot(dat_counts, aes(x = year, y = n_series, fill = used_label)) +
+    geom_col(width = 0.8) +
+    scale_fill_manual(values = c("Used" = reg.col, "Not used" = blank.col)) +
+    coord_cartesian(xlim = c(1970, 2024), expand = FALSE) +
+    scale_y_continuous(breaks = c(max_series_count), limits = c(0, max_series_count)) +
+    theme_minimal() +
+    theme(axis.title = element_blank(), axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(), axis.line.y = element_line(),
+          legend.position = "none",panel.grid = element_blank(),
+          plot.margin = margin(b = 0, t = 5, r = 2, unit = "pt"))
   
   return(list(bar = p_bar, att = p_att))
 }
