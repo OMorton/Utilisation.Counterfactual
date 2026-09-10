@@ -5,31 +5,40 @@
 #   singularity, and mgcv model fitting crashes when running on subsets.
 
 # Process:
-#   1. Parametric Terms:
-#      - Verifies terms have non-zero variance.
-#      - Enforces cross-coverage for ordered factor threats against `used_f`
-#        (drops threats nested exclusively within a single `used_f` level).
-#      - Runs a QR matrix rank check (`model.matrix`) to detect and prune 
-#        collinear parametric terms (e.g., `-1 + used_f` alias conflicts).
+#  1. Parametric Terms:
+#     - Verifies terms exist in data and have non-zero variance (>1 unique value).
+#     - Enforces cross-coverage for ordered factor threats against `used_f`
+#       (drops threats nested exclusively within a single `used_f` level).
+#     - Runs a QR matrix rank check (`model.matrix`) to detect and prune 
+#       collinear parametric terms (e.g., alias conflicts with `-1 + used_f`).
 
-#   2. Smooth Terms:
-#      - Non-'by' Smooths: Drops spatial terms (e.g., `s(Lat, Lon)`) or spatial 
-#        tensors (`ti(Lat, Lon, year)`) if fewer than 5 unique coordinate pairs 
-#        exist, ensuring sufficient spatial points for thin plate splines.
-#      - 'by' Smooths: Enforces strict dependencies—ordered factor smooths are 
-#        dropped if their corresponding parametric term was pruned; numeric 
-#        interaction smooths are dropped if they contain no non-zero variance.
+#  2. Spatial Pre-checks:
+#     - Calculates the total number of unique spatial coordinate pairs (`Latitude`, `Longitude`)
+#       in the subset prior to smooth evaluation.
+
+#  3. Smooth Terms (Safe Parsing & Marginality Enforcement):
+#     - Safe Parsing: Safely extracts core covariates without breaking on nested function 
+#       arguments (e.g., `d = c(2, 1)`, `bs = c('tp', 'cr')` inside spatial-temporal `ti()` terms).
+#     - Random Effects (`bs = 're'`): Validates that random effect variables (e.g., `fyear`) 
+#       exist as valid factors with >1 unique level.
+#     - Non-'by' Smooths: Drops spatial splines (`s(Lat, Lon)`) and spatial-temporal 
+#       tensors (`ti(Lat, Lon, year)`) if fewer than 5 unique coordinate pairs exist.
+#     - 'by' Smooths & Marginality:
+#         * Ordered factor smooths (`*_ord`) are dropped if their corresponding parametric term 
+#           was pruned in Step 1.
+#         * Numeric interaction smooths (`inter_*_num`) are pruned if they contain < 10 
+#           non-zero observations OR if their parent ordered threat (`*_ord`) failed/was 
+#           pruned in Step 1 (via `threat_lookup` mapping)
 
 # Returns:
-#   A vector of valid, clean formula term strings ready to be passed to 
-#   as.formula() and mgcv::bam().
+#   A vector of valid, clean formula term strings 
 
-get_clean_formula_terms <- function(candidate_terms, data) {
+get_clean_formula_terms <- function(candidate_terms, data, threat_lookup = NULL) {
   is_smooth    <- grepl("^(s|ti|te)\\(", candidate_terms)
   para_terms   <- candidate_terms[!is_smooth]
   smooth_terms <- candidate_terms[is_smooth]
   
-  # cehck parametric coefs
+  # --- Step 1: Parametric Terms ---
   valid_para <- character(0)
   has_used_f <- "used_f" %in% names(data)
   
@@ -51,7 +60,6 @@ get_clean_formula_terms <- function(candidate_terms, data) {
     v <- na.omit(data[[term]])
     if (length(unique(v)) <= 1) next
     
-    # Check ordered factor threats against used_f
     if (grepl("_ord$", term) && has_dual_used) {
       min_val <- min(v)
       has_threat_used0 <- any(v[used_vec == 0] > min_val, na.rm = TRUE)
@@ -65,7 +73,7 @@ get_clean_formula_terms <- function(candidate_terms, data) {
     }
   }
   
-  # QR rank check on remaining parametric terms via model.matrix
+  # QR rank check on parametric terms
   if (length(valid_para) > 1) {
     test_form <- as.formula(paste("popchange ~", paste(valid_para, collapse = " + ")))
     X_para <- tryCatch(model.matrix(test_form, data = data), error = function(e) NULL)
@@ -80,57 +88,73 @@ get_clean_formula_terms <- function(candidate_terms, data) {
     }
   }
   
-  # Pre-calculate spatial coordinate count
+  # Spatial points check
   has_spatial_coords <- all(c("Latitude", "Longitude") %in% names(data))
-  if (has_spatial_coords) {
-    n_spatial_pts <- nrow(unique(na.omit(data[, c("Latitude", "Longitude")])))
-  } else {
-    n_spatial_pts <- 0
+  n_spatial_pts <- if (has_spatial_coords) nrow(unique(na.omit(data[, c("Latitude", "Longitude")]))) else 0
+  
+  # Map interaction terms back to their parent ord terms if lookup provided
+  inter_to_ord <- list()
+  if (!is.null(threat_lookup)) {
+    for (t_info in threat_lookup) {
+      inter_to_ord[[t_info$inter]] <- t_info$ord
+    }
   }
   
-  # Check smooths
+  # --- Step 2: Smooth Terms ---
   valid_smooths <- character(0)
   
   for (sm in smooth_terms) {
-    # Extract inner parameters
-    inner_str  <- sub("^[^\\(]+\\((.*)\\)$", "\\1", sm)
-    raw_args   <- unlist(strsplit(inner_str, ","))
-    clean_args <- trimws(raw_args[!grepl("=", raw_args)]) # drop named params (bs='tp', k=20)
+    inner_str <- sub("^[^\\(]+\\((.*)\\)$", "\\1", sm)
     
+    clean_str <- gsub("(bs|k|d|m|xt|sp|fx)\\s*=\\s*c\\([^\\)]+\\)", "", inner_str)
+    clean_str <- gsub("(bs|k|d|m|xt|sp|fx)\\s*=\\s*[^,)]+", "", clean_str)
+    clean_vars <- trimws(unlist(strsplit(clean_str, ",")))
+    clean_vars <- clean_vars[clean_vars != "" & !grepl("by\\s*=", clean_vars)]
     
-    if (!grepl("by\\s*=", sm)) {
-      if (!all(clean_args %in% names(data))) next
-      
-      # Spatial check: >= 5 unique spatial points
-      is_spatial_smooth <- any(c("Latitude", "Longitude") %in% clean_args)
-      if (is_spatial_smooth && n_spatial_pts < 5) {
-        next
-      }
-      
-      # Verify all underlying variables in the smooth have variation (>1 unique value)
-      vars_ok <- all(sapply(clean_args, function(v) length(unique(na.omit(data[[v]]))) > 1))
-      if (vars_ok) {
-        valid_smooths <- c(valid_smooths, sm)
+    # Random effects (bs = 're')
+    if (grepl("bs\\s*=\\s*['\"]re['\"]", sm)) {
+      if (all(clean_vars %in% names(data))) {
+        fyear_var <- clean_vars[1]
+        if (length(unique(na.omit(data[[fyear_var]]))) > 1) {
+          valid_smooths <- c(valid_smooths, sm)
+        }
       }
       next
     }
     
-    # do the by smooths
+    # Non-'by' Smooths
+    if (!grepl("by\\s*=", sm)) {
+      if (!all(clean_vars %in% names(data))) next
+      
+      is_spatial_smooth <- any(c("Latitude", "Longitude") %in% clean_vars)
+      if (is_spatial_smooth && n_spatial_pts < 5) next
+      
+      vars_ok <- all(sapply(clean_vars, function(v) length(unique(na.omit(data[[v]]))) > 1))
+      if (vars_ok) valid_smooths <- c(valid_smooths, sm)
+      next
+    }
+    
+    # 'by' Interaction Smooths
     by_var <- trimws(sub(".*by\\s*=\\s*([^,)]+).*", "\\1", sm))
     
     if (by_var %in% names(data)) {
       val_vec <- na.omit(data[[by_var]])
       
       if (grepl("_ord$", by_var)) {
-        # Ordered factor smooths MUST have their parametric counterpart survive Step 1
-        if (by_var %in% valid_para) {
-          valid_smooths <- c(valid_smooths, sm)
-        }
+        # Main ordered factor smooths MUST have their parametric term survive Step 1
+        if (by_var %in% valid_para) valid_smooths <- c(valid_smooths, sm)
       } else if (by_var == "used_f") {
         if (has_dual_used) valid_smooths <- c(valid_smooths, sm)
       } else {
         # Numeric interaction variables (inter_*_num)
-        if (length(unique(val_vec)) > 1 && any(val_vec != 0)) {
+        # MARGINALITY: Drop interaction smooth if parent _ord variable failed/was pruned!
+        parent_ord <- inter_to_ord[[by_var]]
+        
+        if (!is.null(parent_ord) && !parent_ord %in% valid_para) {
+          next # Skip this interaction smooth!
+        }
+        
+        if (sum(val_vec != 0, na.rm = TRUE) >= 10) {
           valid_smooths <- c(valid_smooths, sm)
         }
       }
