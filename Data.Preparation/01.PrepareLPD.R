@@ -1,6 +1,15 @@
 
-# Code adapted from https://github.com/duncanobrien/multiple-threats/tree/v1.0.2/Code
-# and https://www.science.org/doi/10.1126/sciadv.adx7973
+#############################
+##    DATA PREPARATION     ##
+#############################
+
+# Script to process the LPD as provided by the ZSL LPD team (NOTE - this includes
+# the additional threat data not available in the initial public download).
+# Processing filters the data to only include populations where threat and utilisation
+# state is knownn (present or absent). Subsequently filtering focuses on series
+# of at least 7 years length, and 4 obs (main text) longer cut offs tested in the SM.
+
+# Initial code adapted from https://github.com/duncanobrien/multiple-threats/tree/v1.0.2/Code
 
 
 library(tidyverse)

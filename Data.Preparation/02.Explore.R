@@ -1,3 +1,11 @@
+
+#############################
+##    DATA EXPLORATION     ##
+#############################
+
+# Assess series coverage, and utilsation coverage across taxa and space.
+# Produces FIgure 1. 
+
 library(ggplot2)
 library(sf)
 library(dplyr)
