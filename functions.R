@@ -1,4 +1,8 @@
 
+##################################
+##    CONVENIENCE FUNCTIONS     ##
+##################################
+
 #  get_clean_formula_terms() ---------------------------------------------------
 
 #   Prunes candidate BAM formula terms to prevent rank deficiency, matrix 
@@ -364,4 +368,13 @@ country_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE, reg.
           plot.margin = margin(b = 0, t = 5, r = 2, unit = "pt"))
   
   return(list(bar = p_bar, att = p_att))
+}
+
+# tidy formula tables() ----------------------------------------------------------
+extract_model_info <- function(results_list) {
+  map_dfr(results_list, function(x) {
+    raw_formula <- paste(deparse(x$formula), collapse = " ")
+    clean_formula <- gsub("\\s+", " ", raw_formula)
+    tibble(formula = clean_formula, rho = round(x$rho_est, 3) )
+  }, .id = "taxa")
 }
