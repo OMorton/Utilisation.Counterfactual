@@ -1,3 +1,16 @@
+
+###############################
+##    MAIN MODEL FITTING     ##
+###############################
+
+# script to fit the main text model assessing the impact of use on population abundance
+# trajectories, while accounting for concurrent threats and the inherent data structure.
+# and initial AR naive model is fitted and used to derived the autocorrelation coef
+# that is then used to parametrise and AR(1) model.
+# Data is prepared to tidy and create ordered and unordered version of utilisation
+# and threat to enable efficient coding where ordered threat smooths can be offsets
+# a no threat state see https://fromthebottomoftheheap.net/2017/12/14/difference-splines-ii/
+
 library(tidyverse)
 library(mgcv)
 #library(MASS)
