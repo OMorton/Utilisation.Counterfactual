@@ -198,32 +198,6 @@ inv_plt <- ggplot(filter(contrast_draws, scenario == "Inv"), aes(x = year, y = r
    theme(strip.background =  element_blank(), legend.title = element_blank(),
          legend.position = "bottom", strip.text = element_text(face = "bold"))
 
-thr.arr <- ggarrange(
-  ggarrange(NULL, nt_plt, NULL, widths = c(1, 3, 1), nrow = 1, ncol = 3,
-            labels = c("", "A.", "")),
-  ggarrange(luc_plt, pol_plt,  dis_plt,cc_plt, inv_plt, nrow = 1, ncol = 5, 
-            labels = c("B.", "C.", "D.", "E.", "F."), label.x = -0.02),
-  nrow = 2, heights = c(1, 1))
-
-library(cowplot)
-thr.arr2 <- ggdraw(thr.arr) +
-  draw_plot(thr.arr) +
-  draw_image("Outputs/Misc/digger.png",
-             x = 0.04, y = 0.40, width = 0.09, height = 0.09) + 
-  draw_image("Outputs/Misc/pollution.png",
-             x = 0.24, y = 0.41, width = 0.06, height = 0.06) + 
-  draw_image("Outputs/Misc/disease.png",
-             x = 0.44, y = 0.40, width = 0.08, height = 0.08) + 
-  draw_image("Outputs/Misc/thermometer.png",
-             x = 0.63, y = 0.40, width = 0.08, height = 0.08) + 
-  draw_image("Outputs/Misc/ant.png",
-             x = 0.86, y = 0.41, width = 0.05, height = 0.05) +
-  draw_label("No threats", x = 0.36, y = 0.94, size = 14, fontface = "bold")
-
-ggsave(path = "Outputs/Figures/Tidy", filename = "Threat.Est.v1.png",
-       plot = thr.arr2, width = 8, height = 6, units = "in",bg = "white")
-
-
 ## v2
 thr.arr2 <- ggdraw(thr.arr) +
   draw_plot(thr.arr) +
