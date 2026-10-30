@@ -4,31 +4,33 @@
 #############################
 
 # Assess series coverage, and utilsation coverage across taxa and space.
-# Produces FIgure 1. 
+# Produces main text Figure 1. 
 
-library(ggplot2)
 library(sf)
-library(dplyr)
 library(patchwork)
 library(tidyverse)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(countrycode)
+library(ggpubr)
 
 load(file = "Data/data_models.RData")
 
 ## Summarise and tidy naming ---------------------------------------------------
+
+# simple summaries
 mod_dat_full %>% group_by(Utilised) %>% summarise(length(unique(ID)))
 mod_dat_full %>% group_by(Utilised) %>% summarise(length(unique(Binomial)))
 
 mod_dat_full %>% group_by(threats) %>% summarise(length(unique(ID)))
 mod_dat_full %>% group_by(threats) %>% summarise(length(unique(Binomial)))
 
-mod_dat_full %>% group_by(Utilised) %>% summarise(mean(threats))
+mod_dat_full %>% group_by(Utilised) %>% summarise(mean(threats), sd(threats))
+mod_dat_full %>% group_by(Class, Binomial) %>% summarise(length(unique(ID)))
+
 
 mod_dat_full <- mod_dat_full %>%
-  mutate(
-    Country_clean = iconv(Country, from = "latin1", to = "UTF-8", sub = "?"),
+  mutate(Country_clean = iconv(Country, from = "latin1", to = "UTF-8", sub = "?"),
     Country_clean = case_when(
       grepl("rkiye", Country_clean, ignore.case = TRUE) ~ "Turkey",
       grepl("land Islands", Country_clean, ignore.case = TRUE)~ "Aland Islands",
@@ -137,8 +139,8 @@ mod_dat_full %>%
 taxa.summary <- mod_dat_full %>% 
   group_by(Taxon, Class, used) %>%
   summarise(n.series = length(unique(ID)), .groups = "drop") %>%
-  bind_rows(data.frame(Class = c("Dipneusti", "Holocephali", "Myxini"), 
-                       Taxon = "Fish",used = c(0, 1, 0))) %>%
+  bind_rows(data.frame(Class = c("Dipneusti", "Myxini"), 
+                       Taxon = "Fish",used = c(0, 0))) %>%
   mutate(n.series = ifelse(is.na(n.series), 0, n.series),
          used.cat = factor(ifelse(used == 1, "Used", "Not used"), 
                            levels = c("Used", "Not used"))) %>% 
@@ -146,7 +148,7 @@ taxa.summary <- mod_dat_full %>%
   mutate(Class = factor(Class, levels = unique(Class)))
 
 muted_9 <- c( "#D95F02", "#D4A373", "#2B5C70", "#3B6982", "#4A8B99", 
-              "#1B9E77", "#6A9360", "#7570B3", "#A08B76" )
+              "#1B9E77", "#7570B3", "#A08B76" )
 
 
 taxa.plt <-  ggplot(taxa.summary, aes(x = Class, y = n.series, fill = Class, color = Class)) +
@@ -160,28 +162,27 @@ taxa.plt <-  ggplot(taxa.summary, aes(x = Class, y = n.series, fill = Class, col
   scale_alpha_manual( values = c("Used" = 1, "Not used" = 0), 
                       name = "Status",guide = guide_legend(override.aes = list(fill = "grey40", color = "black"))) +
   scale_y_continuous(breaks = c(0, 250, 500, 750)) +
-  annotate( "segment",  x = 2.5, xend = 7.5, y = 900, yend = 900, 
+  annotate( "segment",  x = 2.5, xend = 6.5, y = 900, yend = 900, 
             color = "black",  linewidth = 0.6) +
   annotate( "segment",  x = 2.5, xend = 2.5, y = 900, yend = 850, 
             color = "black",  linewidth = 0.6) +
-  annotate( "segment",  x = 7.5, xend = 7.5, y = 900, yend = 850, 
+  annotate( "segment",  x = 6.5, xend = 6.5, y = 900, yend = 850, 
             color = "black",  linewidth = 0.6) +
-  annotate( "text", label = "Fish",  x = 5, y = 975, 
+  annotate( "text", label = "Fish",  x = 4.5, y = 975, 
             color = "black", fontface = "bold", size = 3.5) +
   ylab("Total series") +
   #scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
   theme_minimal(base_size = 12) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, colour = "black",
                                    face = c("bold", "bold", "plain", "plain",
-                                            "plain", "plain", "plain", "bold", "bold")),
+                                            "plain", "plain", "bold", "bold")),
         legend.position = "none")
 
-library(ggpubr)
 
 descr.arr <- ggarrange(final_map, taxa.plt, nrow = 2, ncol = 1,
                        heights = c(1, .7), labels = c("A.", "B."))
 
-ggsave(path = "Outputs/Figures", filename = "rawdata.summary.v1.png",
+ggsave(path = "Outputs/Figures/Tidy", filename = "rawdata.summary.v1.png",
        plot = descr.arr, width = 8, height = 8, units = "in",bg = "white")
 
 
