@@ -38,10 +38,7 @@ country.n <- mod_dat_full %>%
   filter(n() == 2, all(n >= 10))
 country.ls <- unique(country.n$Country) # 18 countries
 
-iso.ls <- countrycode(
-  country.ls, 
-  origin = "country.name", 
-  destination = "iso3c") 
+iso.ls <- countrycode(country.ls, origin = "country.name", destination = "iso3c") 
 
 
 world.regions <- world %>% mutate(country.mod = ifelse(iso_a3_eh %in% iso.ls, "Yes", "No"))
@@ -107,7 +104,6 @@ reg.arr <- ggarrange(
 
 
 arrow_style <- arrow(length = unit(0.08, "inches"), type = "closed")
-
 reg.arr2 <- ggdraw(reg.arr) +
   # North America
   draw_line(x = c(0.28, 0.32), y = c(0.71, 0.62), color = "grey30", size = 0.6, arrow = arrow_style) +
@@ -127,7 +123,7 @@ reg.arr2 <- ggdraw(reg.arr) +
 ggsave(path = "Outputs/Figures/Tidy", filename = "Region.Est.v2.png",
        plot = reg.arr2, width = 8, height = 8, units = "in",bg = "white")
 
-## log scale
+## Alternate log scale version
 reg.arr.log <- ggarrange(
   # top row
   ggarrange(NULL,
@@ -194,41 +190,13 @@ country_plots <- set_names(iso.ls, country.ls) %>%
     draws_data <- readRDS(paste0("Outputs/Draws/Country/", file_name, "_draws.csv"))
     
     sum_data   <- read.csv(paste0("Outputs/Tables/Country/", file_name, "_summary_contrast.csv")) %>%
-      mutate(
-        iso = iso, 
+      mutate(iso = iso, 
         country = country_name,
-        region = current_region
-      )
+        region = current_region)
     
-    country_att_plt(
-      draws = draws_data, 
-      summary = sum_data, 
-      common.y = TRUE, 
-      reg.cols = TRUE
-    )
+    country_att_plt(draws = draws_data, summary = sum_data, 
+      common.y = TRUE, reg.cols = TRUE)
   })
-
-ggarrange(
-  ggarrange(country_plots$Canada$bar, country_plots$Canada$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$`United States`$bar, country_plots$`United States`$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$`United Kingdom`$bar, country_plots$`United Kingdom`$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Spain$bar, country_plots$Spain$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$France$bar, country_plots$France$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Germany$bar, country_plots$Germany$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Italy$bar, country_plots$Italy$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Poland$bar, country_plots$Poland$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Norway$bar, country_plots$Norway$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Finland$bar, country_plots$Finland$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Sweden$bar, country_plots$Sweden$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$`Russian Federation`$bar, country_plots$`Russian Federation`$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Japan$bar, country_plots$Japan$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Brazil$bar, country_plots$Brazil$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$`South Africa`$bar, country_plots$`South Africa`$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Zimbabwe$bar, country_plots$Zimbabwe$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$Australia$bar, country_plots$Australia$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  ggarrange(country_plots$`New Zealand`$bar, country_plots$`New Zealand`$att, ncol = 1, heights = c(0.2, 1), align = "v"),
-  nrow = 5, ncol = 4
-)
 
 
 ## national alt--------------
@@ -394,7 +362,7 @@ nat.arr <- ggarrange(eur.plt, nat.plt, nrow = 1, labels = c("A.", "B."), label.x
 ggsave(path = "Outputs/Figures/Tidy", filename = "National.Est.ALT.v1.png",
        plot = nat.arr, width = 8, height = 3, units = "in",bg = "white")
 
-## Numbers for the text ------------------------------------------------------
+## Numbers reported in the main text -------------------------------------------
 mod_dat_full %>% group_by(Region) %>% summarise(n_distinct(series))
 
 nam_chained_sum %>% filter(year== max(year)) %>%
@@ -425,12 +393,9 @@ nat.yr.sum <- all_summaries %>% group_by(country) %>% filter(year== max(year)) %
 
 nat.yr.sum %>% filter(region == "Europe")
 
-##
 nrow(all_summaries)
 nrow(all_summaries %>% filter(att_ratio_lo > 1))
 nrow(all_summaries %>% filter(att_ratio_hi < 1))
-914-19-340
-
 
 region.n <- mod_dat_full %>% 
   group_by(Region, used) %>% 
