@@ -40,3 +40,7 @@ Processes the calculated ATTs and generates the figures presented in the paper:
 * **`threat.figures.plotting.R`**: Generates threat-level and utilization visualizations (**Figure 4**).
 
 ---
+
+The raw data were obtained from the LPD which can be requested at: www.livingplanetindex.org/data_portal (current data accessed 6th August 2026). All use of the dataset complied with the LPD’s Data Use Policy. The LPD’s Data Use Policy states that we cannot “pass the original datasets on to third parties and…direct all requests for use of the data back to LivingPlanetIndex@ioz.ac.uk” because of confidentiality concerns. 
+
+---
