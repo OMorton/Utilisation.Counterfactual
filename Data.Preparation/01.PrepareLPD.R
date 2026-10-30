@@ -8,7 +8,6 @@
 # Processing filters the data to only include populations where threat and utilisation
 # state is knownn (present or absent). Subsequently filtering focuses on series
 # of at least 7 years length, and 4 obs (main text) longer cut offs tested in the SM.
-
 # Initial code adapted from https://github.com/duncanobrien/multiple-threats/tree/v1.0.2/Code
 
 
