@@ -178,7 +178,7 @@ class_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE, taxa.c
   blank.col <- "grey60"
   
   if (taxa.cols == T) {
-    blank.col <- "grey95"
+    blank.col <- "grey75"
     if (taxa == "Actinopteri") {taxa.col <- "#2B5C70"}
     if (taxa == "Aves") {taxa.col <- "#D4A373"}
     if (taxa == "Elasmobranchii") {taxa.col <- "#4A8B99"}
@@ -243,7 +243,7 @@ region_att_plt <- function(draws = NULL, summary = NULL, common.y = FALSE, reg.c
   blank.col <- "grey60"
   
   if (reg.cols == T) {
-    blank.col <- "grey95"
+    blank.col <- "grey75"
     if (reg == "Africa") {reg.col <- "#C0392B"}
     if (reg == "Antarctic") {reg.col <- "#F39C12"}
     if (reg == "Asia") {reg.col <- "#00B4D8"}
