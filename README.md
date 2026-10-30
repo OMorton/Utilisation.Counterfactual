@@ -1,14 +1,14 @@
 # Historic and Ongoing Impacts of Human Utilization on Population Abundance
 
-This repository contains the R code and analytical pipeline supporting the research paper:
+This repository contains the R code and analytical pipeline supporting:
 
-> **Morton, O.***, McRae, L., O'Brien, D., & Johnson, T. F. — *"Historic and ongoing impacts of human utilization on population abundance"*
+> **Morton, O.***, McRae, L., O'Brien, D., & Johnson, T. F. — *"Historic and ongoing impacts of human utilization on population abundance" (2026)*
 
 ---
 
 ## 📌 Repository Overview
 
-This project provides an end-to-end workflow to process Living Planet Database (LPD) records, fit Generalized Additive Mixed Models (GAMMs) accounting for auto-regressive structures, extract Average Treatment Effects on the Treated (ATT), and reproduce the manuscript's figures.
+This project provides an end-to-end workflow to process Living Planet Database (LPD) records, fit Generalized Additive Mixed Models (GAMMs) accounting for auto-regressive structures, spatial correlation and co-occuring stressors, and extract chained temporal Average Treatment Effects on the Treated (ATT) denoting the impact of utilisation on population abundance trajectories, and reproduce the manuscript's figures.
 
 ---
 
